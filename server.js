@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 
-const allowedOrigins = ['https://personal-budget-tracker-app-74024f5d4462.herokuapp.com'];
+const allowedOrigins = ['https://personal-budget-tracker-app-efafa0e8c6ba.herokuapp.com'];
 
 const corsOptions = {
   origin: function (origin, callback) {
