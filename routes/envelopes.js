@@ -102,7 +102,7 @@ router.post('/fund-distribution', async (req, res) => {
         return badRequestError(res, 'Invalid distribution data');
     }
 
-    let client = null;  // Initialize client to null
+    let client = null;  
 
     try {
         client = await pool.connect();
@@ -120,7 +120,7 @@ router.post('/fund-distribution', async (req, res) => {
         await client.query('COMMIT');
         res.send('Funds distributed successfully');
     } catch (error) {
-        await client?.query('ROLLBACK');  // Use optional chaining to guard against null
+        await client?.query('ROLLBACK');  
         console.error('Fund distribution failed:', error.message);
         badRequestError(res, 'Fund distribution failed');
     } finally {
