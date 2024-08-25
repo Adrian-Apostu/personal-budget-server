@@ -77,16 +77,20 @@ router.post('/transfer', async (req, res) => {
     const { fromId, toId, amount } = req.body;
     try {
         await pool.query('BEGIN');
-        await pool.query(
-            'UPDATE envelopes SET balance = balance - $1 WHERE id = $2',
+        const fromEnvelope = await pool.query(
+            'UPDATE envelopes SET balance = balance - $1 WHERE id = $2 RETURNING *',
             [amount, fromId]
         );
-        await pool.query(
-            'UPDATE envelopes SET balance = balance + $1 WHERE id = $2',
+        const toEnvelope = await pool.query(
+            'UPDATE envelopes SET balance = balance + $1 WHERE id = $2 RETURNING *',
             [amount, toId]
         );
         await pool.query('COMMIT');
-        res.send('Transfer successful');
+
+        res.status(200).json({
+            message: 'Transfer successful',
+            updatedEnvelopes: [fromEnvelope.rows[0], toEnvelope.rows[0]]
+        });
     } catch (error) {
         await pool.query('ROLLBACK');
         console.error('Transaction failed: ', error.message);
@@ -102,25 +106,30 @@ router.post('/fund-distribution', async (req, res) => {
         return badRequestError(res, 'Invalid distribution data');
     }
 
-    let client = null;  
+    let client = null;
 
     try {
         client = await pool.connect();
         await client.query('BEGIN');
 
         const distributionAmount = totalAmount / envelopeIds.length;
+        const updatedEnvelopes = [];
 
         for (let envelopeId of envelopeIds) {
-            await client.query(
-                'UPDATE envelopes SET balance = balance + $1 WHERE id = $2',
+            const updatedEnvelope = await client.query(
+                'UPDATE envelopes SET balance = balance + $1 WHERE id = $2 RETURNING *',
                 [distributionAmount, envelopeId]
             );
+            updatedEnvelopes.push(updatedEnvelope.rows[0]);
         }
 
         await client.query('COMMIT');
-        res.send('Funds distributed successfully');
+        res.status(200).json({
+            message: 'Funds distributed successfully',
+            updatedEnvelopes: updatedEnvelopes
+        });
     } catch (error) {
-        await client?.query('ROLLBACK');  
+        await client?.query('ROLLBACK');
         console.error('Fund distribution failed:', error.message);
         badRequestError(res, 'Fund distribution failed');
     } finally {
